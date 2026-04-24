@@ -28,7 +28,7 @@ const iconMap: Record<string, any> = {
   "Scorpion Fighting": Swords,
 }
 
-export function Sidebar() {
+export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {
   const pathname = usePathname()
   const { lomba } = useLomba()
   const [isAdmin, setIsAdmin] = useState(false)
@@ -48,13 +48,27 @@ export function Sidebar() {
   }, [])
 
   return (
-    <aside className="flex flex-col w-64 bg-[var(--color-sidebar)] text-[var(--color-sidebar-foreground)] h-full shadow-lg shadow-black/10 z-20 transition-all">
-      <div className="p-6 border-b border-white/10">
-        <Link href="/" className="block hover:opacity-80 transition-opacity">
-          <h1 className="text-xl font-bold tracking-tight">IYRC YARSI 2026</h1>
-          <p className="text-sm opacity-80 mt-1">Admin Dashboard</p>
-        </Link>
-      </div>
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          onClick={() => setIsOpen?.(false)}
+        />
+      )}
+
+      {/* Sidebar Content */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 flex flex-col w-64 bg-[var(--color-sidebar)] text-[var(--color-sidebar-foreground)] h-full shadow-lg shadow-black/10 transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+          <Link href="/" className="block hover:opacity-80 transition-opacity" onClick={() => setIsOpen?.(false)}>
+            <h1 className="text-xl font-bold tracking-tight">IYRC YARSI 2026</h1>
+            <p className="text-sm opacity-80 mt-1">Admin Dashboard</p>
+          </Link>
+        </div>
       
       <nav className="flex-1 overflow-y-auto py-4">
         <div className="px-4 text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
@@ -64,6 +78,7 @@ export function Sidebar() {
           <li>
             <Link
               href="/master-data"
+              onClick={() => setIsOpen?.(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all ${
                 pathname === "/master-data" 
                   ? "bg-white/20 font-medium" 
@@ -88,6 +103,7 @@ export function Sidebar() {
               <li key={item.id}>
                 <Link
                   href={href}
+                  onClick={() => setIsOpen?.(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all ${
                     isActive 
                       ? "bg-white/20 font-medium" 
@@ -111,6 +127,7 @@ export function Sidebar() {
               <li>
                 <Link
                   href="/lomba-management"
+                  onClick={() => setIsOpen?.(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all ${
                     pathname === "/lomba-management" 
                       ? "bg-white/20 font-medium" 
@@ -124,6 +141,7 @@ export function Sidebar() {
               <li>
                 <Link
                   href="/user-management"
+                  onClick={() => setIsOpen?.(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-md transition-all ${
                     pathname === "/user-management" 
                       ? "bg-white/20 font-medium" 
@@ -142,7 +160,8 @@ export function Sidebar() {
       <div className="p-4 border-t border-white/10 text-xs opacity-60 text-center">
         &copy; 2026 IYRC Event
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 

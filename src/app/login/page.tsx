@@ -10,7 +10,7 @@ export default async function LoginPage({
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--color-background)]">
-      <div className="w-full max-w-md p-8 space-y-8 bg-card border border-border rounded-xl shadow-lg relative overflow-hidden">
+      <div className="w-full max-w-md mx-4 sm:mx-0 p-6 sm:p-8 space-y-8 bg-card border border-border rounded-xl shadow-lg relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-green-300"></div>
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-2xl"></div>
