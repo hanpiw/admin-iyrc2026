@@ -29,10 +29,10 @@ export function Navbar({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
       
       <div className="flex items-center gap-4">
-        <button className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors relative" aria-label="Notifications">
+        <a href="/history" className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors relative" aria-label="Notifications">
           <Bell className="h-5 w-5" />
           <span className="absolute top-1 right-1.5 h-2 w-2 rounded-full bg-red-500"></span>
-        </button>
+        </a>
         <ThemeToggle />
         <div className="h-6 w-px bg-border mx-1"></div>
         <div className="flex items-center gap-2">

@@ -7,8 +7,8 @@ import { CheckCircle2, Circle, Trash2, Search } from 'lucide-react'
 interface TablePesertaProps {
   peserta: PesertaWithStatus[]
   loading: boolean
-  onToggleAcc: (id: string, currentStatus: boolean) => void
-  onDelete: (id: string) => void
+  onToggleAcc: (id: string, currentStatus: boolean, pesertaName?: string) => void
+  onDelete: (id: string, pesertaName?: string) => void
   searchQuery: string
   showLombaColumn?: boolean
 }
@@ -37,6 +37,7 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQu
               <th className="px-6 py-4 font-medium">Kelas</th>
               <th className="px-6 py-4 font-medium">Sekolah</th>
               {showLombaColumn && <th className="px-6 py-4 font-medium">Lomba</th>}
+              <th className="px-6 py-4 font-medium">Sub Kategori & Level</th>
               <th className="px-6 py-4 font-medium text-center">Status ACC</th>
               <th className="px-6 py-4 font-medium text-right">Aksi</th>
             </tr>
@@ -44,7 +45,7 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQu
           <tbody className="divide-y divide-border">
             {filteredPeserta.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                <td colSpan={showLombaColumn ? 7 : 6} className="px-6 py-8 text-center text-muted-foreground">
                   Tidak ada data peserta ditemukan.
                 </td>
               </tr>
@@ -56,9 +57,16 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQu
                   <td className="px-6 py-4">{p.sekolah}</td>
                   {showLombaColumn && <td className="px-6 py-4">{p.lomba_nama}</td>}
                   <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1 items-start">
+                      {p.sub_kategori && <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded">{p.sub_kategori}</span>}
+                      {p.level && <span className="text-xs text-muted-foreground border border-border px-2 py-0.5 rounded">{p.level}</span>}
+                      {!p.sub_kategori && !p.level && <span className="text-muted-foreground">-</span>}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
                     <div className="flex justify-center">
                       <button 
-                        onClick={() => onToggleAcc(p.peserta_lomba_id, p.status_acc)}
+                        onClick={() => onToggleAcc(p.peserta_lomba_id, p.status_acc, p.nama)}
                         className={`flex items-center gap-2 px-3 py-1 rounded-full border transition-all ${
                           p.status_acc 
                             ? 'bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20' 
@@ -82,8 +90,8 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQu
                   <td className="px-6 py-4 text-right">
                     <button 
                       onClick={() => {
-                        if (confirm('Yakin ingin menghapus peserta ini?')) {
-                          onDelete(p.peserta_lomba_id)
+                        if (confirm(`Yakin ingin menghapus peserta ${p.nama}?`)) {
+                          onDelete(p.peserta_lomba_id, p.nama)
                         }
                       }}
                       className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"

@@ -48,13 +48,13 @@ export function usePeserta(lombaSlug: string) {
     }
   }, [fetchPeserta])
 
-  const toggleAcc = async (id: string, currentStatus: boolean) => {
+  const toggleAcc = async (id: string, currentStatus: boolean, pesertaName?: string) => {
     // Optimistic update
     setPeserta(prev => prev.map(p => 
       p.peserta_lomba_id === id ? { ...p, status_acc: !currentStatus } : p
     ))
     
-    const success = await pesertaService.toggleAccStatus(id, currentStatus)
+    const success = await pesertaService.toggleAccStatus(id, currentStatus, pesertaName)
     if (!success) {
       // Revert on failure
       setPeserta(prev => prev.map(p => 
@@ -63,12 +63,12 @@ export function usePeserta(lombaSlug: string) {
     }
   }
 
-  const deletePeserta = async (id: string) => {
+  const deletePeserta = async (id: string, pesertaName?: string) => {
     // Optimistic update
     const previous = [...peserta]
     setPeserta(prev => prev.filter(p => p.peserta_lomba_id !== id))
     
-    const success = await pesertaService.deletePeserta(id)
+    const success = await pesertaService.deletePeserta(id, pesertaName)
     if (!success) {
       // Revert on failure
       setPeserta(previous)
