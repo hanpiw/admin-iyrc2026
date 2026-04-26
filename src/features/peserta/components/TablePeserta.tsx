@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { PesertaWithStatus } from '../types'
-import { CheckCircle2, Circle, Trash2, Search } from 'lucide-react'
+import { CheckCircle2, Circle, Trash2, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 
 interface TablePesertaProps {
   peserta: PesertaWithStatus[]
@@ -14,10 +14,49 @@ interface TablePesertaProps {
 }
 
 export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQuery, showLombaColumn = false }: TablePesertaProps) {
-  const filteredPeserta = peserta.filter(p => 
-    p.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    p.sekolah.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(10) // 0 means 'All'
+
+  // Filter based on search query
+  const filteredPeserta = useMemo(() => {
+    return peserta.filter(p => 
+      p.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      p.sekolah.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [peserta, searchQuery])
+
+  // Calculate pagination
+  const totalItems = filteredPeserta.length
+  const totalPages = pageSize === 0 ? 1 : Math.ceil(totalItems / pageSize)
+  
+  // Reset to page 1 if search changes or page size changes
+  useMemo(() => {
+    setCurrentPage(1)
+  }, [searchQuery, pageSize])
+
+  // Get current page items
+  const currentItems = useMemo(() => {
+    if (pageSize === 0) return filteredPeserta
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredPeserta.slice(startIndex, startIndex + pageSize)
+  }, [filteredPeserta, currentPage, pageSize])
+
+  // Generate page numbers for pagination
+  const pageNumbers = useMemo(() => {
+    const pages = []
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, 5)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+      } else {
+        pages.push(currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2)
+      }
+    }
+    return pages
+  }, [currentPage, totalPages])
 
   if (loading) {
     return (
@@ -28,7 +67,34 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQu
   }
 
   return (
-    <div className="w-full bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+    <div className="w-full bg-card border border-border rounded-xl shadow-sm flex flex-col">
+      {/* Table Controls (Top) */}
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">
+          Total: <span className="font-semibold text-foreground">{totalItems}</span> peserta
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground hidden sm:inline-block">Tampilkan:</span>
+          <div className="relative inline-block w-24">
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              className="w-full appearance-none bg-background border border-border rounded-md px-3 py-1.5 pr-8 focus:outline-none focus:ring-2 focus:ring-primary text-sm cursor-pointer"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={30}>30</option>
+              <option value={0}>Semua</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-muted-foreground">
+              <ChevronDown className="h-4 w-4" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Table Content */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
@@ -43,14 +109,14 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQu
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {filteredPeserta.length === 0 ? (
+            {currentItems.length === 0 ? (
               <tr>
                 <td colSpan={showLombaColumn ? 7 : 6} className="px-6 py-8 text-center text-muted-foreground">
                   Tidak ada data peserta ditemukan.
                 </td>
               </tr>
             ) : (
-              filteredPeserta.map((p) => (
+              currentItems.map((p) => (
                 <tr key={p.peserta_lomba_id} className="hover:bg-muted/50 transition-colors">
                   <td className="px-6 py-4 font-medium">{p.nama}</td>
                   <td className="px-6 py-4">{p.kelas}</td>
@@ -106,6 +172,48 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, searchQu
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls (Bottom) */}
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-muted-foreground">
+            Menampilkan <span className="font-medium text-foreground">{(currentPage - 1) * pageSize + 1}</span> hingga <span className="font-medium text-foreground">{Math.min(currentPage * pageSize, totalItems)}</span> dari <span className="font-medium text-foreground">{totalItems}</span> hasil
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 border border-border bg-background rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            
+            {pageNumbers.map(pageNum => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-9 h-9 flex items-center justify-center rounded-md border text-sm font-medium transition-colors ${
+                  currentPage === pageNum
+                    ? 'bg-primary border-primary text-primary-foreground'
+                    : 'bg-background border-border text-foreground hover:bg-muted'
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="flex items-center gap-1 p-2 border border-border bg-background rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              <span className="hidden sm:inline-block pl-1">Berikutnya</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
