@@ -7,25 +7,33 @@ import { createClient } from "@/lib/supabase/client"
 import { useLomba } from "@/features/lomba/hooks/useLomba"
 import { 
   Database, 
-  CarFront, 
-  Plane, 
-  Crosshair, 
+  Baby,
+  Zap,
+  Trophy,
   Code2, 
-  TerminalSquare, 
-  Swords,
+  Sparkles,
+  Palette,
+  Gamepad2,
+  Plane,
+  Recycle,
+  Drama,
   Folder,
   Settings2,
   Users
 } from "lucide-react"
 
-// Icon mapping based on naming conventions or defaults
+// Icon mapping for each lomba category
 const iconMap: Record<string, any> = {
-  "Brick Speed": CarFront,
-  "Drone Racing": Plane,
-  "Drone Soccer": Crosshair,
-  "Drone Coding": Code2,
-  "Coding Mission": TerminalSquare,
-  "Scorpion Fighting": Swords,
+  "Kinder Mission": Baby,
+  "Brickspeed": Zap,
+  "2 On 2 Soccer": Trophy,
+  "Coding Mission": Code2,
+  "AI Animation": Sparkles,
+  "Creative": Palette,
+  "Game Maker Kit": Gamepad2,
+  "Drone Soccer": Plane,
+  "Item Recycle": Recycle,
+  "Robot Teather": Drama,
 }
 
 export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {

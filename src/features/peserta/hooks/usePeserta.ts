@@ -75,12 +75,21 @@ export function usePeserta(lombaSlug: string) {
     }
   }
 
+  const updatePeserta = async (pesertaId: string, pesertaLombaId: string, data: { nama: string; kelas: string; sekolah: string; sub_kategori?: string; level?: string }): Promise<boolean> => {
+    const success = await pesertaService.updatePeserta(pesertaId, pesertaLombaId, data)
+    if (success) {
+      fetchPeserta()
+    }
+    return success
+  }
+
   return {
     peserta,
     loading,
     error,
     toggleAcc,
     deletePeserta,
+    updatePeserta,
     refresh: fetchPeserta
   }
 }

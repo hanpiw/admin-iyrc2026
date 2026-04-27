@@ -24,17 +24,17 @@ export default async function LoginPage({
         <form className="space-y-6 relative z-10" action={login}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="email">
-                Email address
+              <label className="block text-sm font-medium mb-1" htmlFor="identifier">
+                Email / Username
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="identifier"
+                name="identifier"
+                type="text"
+                autoComplete="username"
                 required
                 className="w-full px-4 py-2 border border-border bg-background rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                placeholder="admin@iyrc.com"
+                placeholder="admin@iyrc.com atau username"
               />
             </div>
             <div>

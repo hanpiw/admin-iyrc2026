@@ -6,64 +6,78 @@ import { revalidatePath } from 'next/cache'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+function getAdminClient() {
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  })
+}
+
 export async function createUser(formData: FormData) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const nama = formData.get('nama') as string
+  const username = formData.get('username') as string
   const role = formData.get('role') as string
   const lomba_id = formData.get('lomba_id') as string
 
-  if (!email || !password || !nama || !role) {
-    return { error: 'Semua field wajib diisi' }
-  }
+  if (!email || !password || !nama || !role) return { error: 'Semua field wajib diisi' }
+  if (role === 'pic' && !lomba_id) return { error: 'Kategori lomba wajib dipilih untuk PIC' }
 
-  if (role === 'pic' && !lomba_id) {
-    return { error: 'Kategori lomba wajib dipilih untuk PIC' }
-  }
+  const admin = getAdminClient()
 
-  // Create admin client
-  const adminAuthClient = createClient(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
+  const { data, error } = await admin.auth.admin.createUser({
+    email, password, email_confirm: true,
+    user_metadata: { nama, role }
   })
 
-  // Since we have a trigger 'handle_new_user' on auth.users insert,
-  // it will automatically create a row in 'profiles'.
-  // However, the trigger expects 'nama' and 'role' in raw_user_meta_data.
-  // We need to pass them during createUser.
-  // Wait, the trigger does not map 'lomba_id'. We should update the trigger or update the profile manually.
-  // Let's pass lomba_id in user_metadata and update the trigger. 
-  // Wait, modifying the trigger requires SQL execution. Instead, we can update the profile directly after user creation.
+  if (error) return { error: error.message }
 
-  const { data, error } = await adminAuthClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: {
-      nama,
-      role
-    }
-  })
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  // If role is pic and lomba_id exists, update the profile's lomba_id
-  if (role === 'pic' && lomba_id && data.user) {
-    const { error: profileError } = await adminAuthClient
-      .from('profiles')
-      .update({ lomba_id })
-      .eq('id', data.user.id)
-
-    if (profileError) {
-      console.error('Error updating profile lomba_id:', profileError)
-      // Even if this fails, the user is created. But it's an edge case.
+  // Update profile with lomba_id and username
+  if (data.user) {
+    const updates: any = {}
+    if (role === 'pic' && lomba_id) updates.lomba_id = lomba_id
+    if (username) updates.username = username
+    if (Object.keys(updates).length > 0) {
+      await admin.from('profiles').update(updates).eq('id', data.user.id)
     }
   }
 
   revalidatePath('/user-management')
   return { success: 'User berhasil dibuat!' }
+}
+
+export async function updateUser(formData: FormData) {
+  const userId = formData.get('userId') as string
+  const nama = formData.get('nama') as string
+  const username = formData.get('username') as string
+  const role = formData.get('role') as string
+  const lomba_id = formData.get('lomba_id') as string
+
+  if (!userId || !nama || !role) return { error: 'Data tidak lengkap' }
+
+  const admin = getAdminClient()
+
+  const { error } = await admin.from('profiles').update({
+    nama,
+    username: username || null,
+    role,
+    lomba_id: role === 'pic' && lomba_id ? lomba_id : null
+  }).eq('id', userId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/user-management')
+  return { success: 'User berhasil diperbarui!' }
+}
+
+export async function deleteUser(userId: string) {
+  if (!userId) return { error: 'User ID diperlukan' }
+
+  const admin = getAdminClient()
+  const { error } = await admin.auth.admin.deleteUser(userId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/user-management')
+  return { success: 'User berhasil dihapus!' }
 }

@@ -15,6 +15,7 @@ CREATE TABLE public.profiles (
   role user_role NOT NULL DEFAULT 'pic',
   lomba_id UUID REFERENCES public.lomba(id) ON DELETE SET NULL, -- Only used if role is pic
   nama VARCHAR(255),
+  username VARCHAR(100) UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

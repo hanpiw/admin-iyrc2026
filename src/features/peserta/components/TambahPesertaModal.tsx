@@ -29,7 +29,9 @@ export function TambahPesertaModal({ isOpen, onClose, onSuccess, preselectedLomb
     if (isOpen) {
       lombaService.getAllLomba().then(data => {
         setLombaOptions(data)
-        if (data.length > 0 && !lombaId && !preselectedLombaId) {
+        if (preselectedLombaId) {
+          setLombaId(preselectedLombaId)
+        } else if (data.length > 0 && !lombaId) {
           setLombaId(data[0].id)
         }
       })
