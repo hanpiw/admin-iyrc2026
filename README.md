@@ -1,36 +1,180 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Admin IYRC 2026
 
-## Getting Started
+Admin IYRC 2026 adalah web dashboard berbasis **Next.js** yang digunakan untuk mengelola data peserta, lomba, user, serta aktivitas sistem dalam satu platform terpusat. Aplikasi ini dirancang untuk kebutuhan manajemen kompetisi (IYRC 2026) dengan fokus pada efisiensi operasional dan kemudahan monitoring data.
 
-First, run the development server:
+---
+
+## 📌 Deskripsi Aplikasi
+
+Aplikasi ini berfungsi sebagai **admin panel** untuk:
+
+- Manajemen data peserta (CRUD, import/export Excel)
+- Manajemen lomba & kategori
+- Monitoring aktivitas (audit logs / history)
+- Manajemen user (role & akses)
+- Pengaturan sistem (settings)
+- Autentikasi admin
+
+Struktur dibuat modular dengan pendekatan feature-based untuk mempermudah scaling dan maintenance.
+
+---
+
+## 🧰 Tech Stack
+
+### Frontend
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Lucide React (Icons)
+
+### Backend / Services
+- Supabase (Auth + Database + SSR support)
+
+### Utilities
+- XLSX (Import/export data peserta)
+- next-themes (Dark/Light mode)
+
+---
+
+## 📁 Project Structure
+
+```bash
+admin-iyrc2026-main/
+│
+├── public/                 # Static assets
+├── src/
+│   ├── app/                # Routing (Next.js App Router)
+│   │   ├── (dashboard)/    # Protected dashboard pages
+│   │   │   ├── history/
+│   │   │   ├── lomba/
+│   │   │   ├── lomba-management/
+│   │   │   ├── master-data/
+│   │   │   ├── settings/
+│   │   │   └── user-management/
+│   │   ├── login/          # Auth page
+│   │   └── layout.tsx      # Root layout
+│   │
+│   ├── components/         # Global reusable components
+│   │   ├── layout/         # Navbar, Sidebar, Layout Wrapper
+│   │   └── theme/          # Theme configuration
+│   │
+│   ├── features/           # Feature-based modules
+│   │   ├── peserta/
+│   │   │   ├── components/
+│   │   │   ├── hooks/
+│   │   │   ├── services/
+│   │   │   └── utils/
+│   │   ├── lomba/
+│   │   └── history/
+│   │
+│   ├── lib/                # Shared utilities & configs
+│   │   └── supabase/       # Supabase client & middleware
+│   │
+│   └── middleware.ts       # Route protection
+│
+├── schema.sql              # Database schema
+├── package.json
+└── next.config.ts
+```
+
+---
+
+## ⚙️ Getting Started
+
+First, clone the repository:
+
+```bash
+git clone https://github.com/hanpiw/admin-iyrc2026.git
+cd admin-iyrc2026
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Setup environment variables by creating a `.env.local` file:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+```
+
+Setup database:
+
+- Open Supabase dashboard
+- Go to SQL Editor
+- Import and run `schema.sql`
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🔐 Authentication
 
-## Learn More
+- Menggunakan Supabase Auth
+- Middleware digunakan untuk proteksi route dashboard
+- User harus login untuk mengakses halaman admin
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📊 Fitur Utama
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 👥 Peserta
+- Tambah, edit, hapus peserta
+- Import Excel
+- Export data
+- Search & filtering
 
-## Deploy on Vercel
+### 🏆 Lomba
+- Manajemen data lomba
+- Detail per kategori
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 📜 History / Audit Log
+- Tracking aktivitas admin
+- Monitoring perubahan data
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### ⚙️ Settings
+- Konfigurasi sistem
+
+### 👤 User Management
+- Role-based access
+- CRUD user
+
+---
+
+## 🧠 Arsitektur & Pendekatan
+
+Aplikasi menggunakan pendekatan:
+
+- Feature-based architecture (modular & scalable)
+- Separation of concerns:
+  - `components` → UI
+  - `hooks` → logic
+  - `services` → data fetching
+- SSR Supabase integration untuk performa & keamanan
+
+---
+
+## 📌 Notes
+
+Beberapa peningkatan yang bisa dilakukan:
+
+- Validasi form (Zod / Yup)
+- State management (Zustand / Redux)
+- Unit testing
+- Role permission lebih granular
+
+---
+
+## 🤝 Contributing
+
+Pull request terbuka untuk improvement. Silakan fork repository ini dan kembangkan sesuai kebutuhan.
