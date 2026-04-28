@@ -85,7 +85,7 @@ admin-iyrc2026-main/
 First, clone the repository:
 
 ```bash
-git clone https://github.com/username/admin-iyrc2026.git
+git clone https://github.com/hanpiw/admin-iyrc2026.git
 cd admin-iyrc2026
 ```
 
