@@ -114,12 +114,12 @@ export const pesertaService = {
     if (!allLomba) { result.errors.push('Gagal memuat data lomba'); return result }
     const lombaMap = new Map(allLomba.map(l => [l.nama.toLowerCase(), l.id]))
 
-    // 2. Group rows by participant name to handle multi-category cells and duplicate rows
+    // 2. Group rows by participant name
     const participantsData = new Map<string, { 
       nama: string; 
       kelas: string; 
       sekolah: string; 
-      lombaIds: Set<string>; 
+      lombaEntries: Set<string>; // Stores "lombaId|subKategori"
       level: string | null 
     }>()
 
@@ -130,23 +130,35 @@ export const pesertaService = {
 
       const nama = capitalizeEachWord(rawNama)
       const nameKey = nama.toLowerCase()
-      const categories = rawKategori.split(',').map(c => c.trim()).filter(c => c)
+      const entries = rawKategori.split(',').map(c => c.trim()).filter(c => c)
       
       if (!participantsData.has(nameKey)) {
         participantsData.set(nameKey, {
           nama,
           kelas: row.kelas?.toString().trim() || '',
           sekolah: row.sekolah?.toString().trim() || '',
-          lombaIds: new Set(),
+          lombaEntries: new Set(),
           level: row.level?.toString().trim() || null
         })
       }
 
       const pData = participantsData.get(nameKey)!
-      for (const catName of categories) {
-        const lid = lombaMap.get(catName.toLowerCase())
-        if (lid) pData.lombaIds.add(lid)
-        else result.errors.push(`Kategori "${catName}" tidak ditemukan untuk: ${nama}`)
+      for (const entry of entries) {
+        let lombaName = entry
+        let subKategori = ''
+        
+        if (entry.includes(' - ')) {
+          const parts = entry.split(' - ')
+          lombaName = parts[0].trim()
+          subKategori = parts[1].trim()
+        }
+
+        const lid = lombaMap.get(lombaName.toLowerCase())
+        if (lid) {
+          pData.lombaEntries.add(`${lid}|${subKategori}`)
+        } else {
+          result.errors.push(`Kategori "${lombaName}" tidak ditemukan untuk: ${nama}`)
+        }
       }
     }
 
@@ -163,17 +175,18 @@ export const pesertaService = {
 
     // 4. Batch fetch existing links for these peserta
     const existingIds = existingPesertaList?.map(p => p.id) || []
-    const linkSet = new Set<string>() // Stores "pesertaId_lombaId"
+    const linkSet = new Set<string>() // Stores "pesertaId_lombaId_subKategori"
     const participantLinkCount = new Map<string, number>() // Stores "pesertaId" -> count
 
     if (existingIds.length > 0) {
       const { data: links } = await supabase
         .from('peserta_lomba')
-        .select('peserta_id, lomba_id')
+        .select('peserta_id, lomba_id, sub_kategori')
         .in('peserta_id', existingIds)
       
       links?.forEach(l => {
-        linkSet.add(`${l.peserta_id}_${l.lomba_id}`)
+        const sub = l.sub_kategori || ''
+        linkSet.add(`${l.peserta_id}_${l.lomba_id}_${sub}`)
         participantLinkCount.set(l.peserta_id, (participantLinkCount.get(l.peserta_id) || 0) + 1)
       })
     }
@@ -188,22 +201,25 @@ export const pesertaService = {
 
       if (isNewPeserta) {
         pesertaId = crypto.randomUUID()
-        pesertaToUpsert.push({ id: pesertaId, nama: data.nama, kelas: data.kelas, sekolah: data.sekolah })
-      } else {
-        // Update existing peserta basic info
-        pesertaToUpsert.push({ id: pesertaId, nama: data.nama, kelas: data.kelas, sekolah: data.sekolah })
       }
+      
+      // Upsert peserta info
+      pesertaToUpsert.push({ id: pesertaId, nama: data.nama, kelas: data.kelas, sekolah: data.sekolah })
 
       // Process categories
       let currentLinks = participantLinkCount.get(pesertaId!) || 0
       
-      for (const lid of data.lombaIds) {
-        if (linkSet.has(`${pesertaId}_${lid}`)) {
+      for (const entryStr of data.lombaEntries) {
+        const [lid, subKategori] = entryStr.split('|')
+        const sub = subKategori || ''
+        
+        if (linkSet.has(`${pesertaId}_${lid}_${sub}`)) {
           result.updated++
         } else {
           if (currentLinks >= 3) {
             const lName = Array.from(lombaMap.entries()).find(([_, id]) => id === lid)?.[0] || 'Unknown'
-            result.errors.push(`${data.nama} sudah mencapai limit 3 lomba. Dilewati untuk: ${lName}`)
+            const catDisplay = sub ? `${lName} - ${sub}` : lName
+            result.errors.push(`${data.nama} sudah mencapai limit 3 lomba. Dilewati untuk: ${catDisplay}`)
             result.skipped++
             continue
           }
@@ -211,10 +227,11 @@ export const pesertaService = {
           linksToInsert.push({ 
             peserta_id: pesertaId, 
             lomba_id: lid, 
+            sub_kategori: sub || null,
             level: data.level, 
             status_acc: false 
           })
-          linkSet.add(`${pesertaId}_${lid}`) // Avoid duplicates in same import
+          linkSet.add(`${pesertaId}_${lid}_${sub}`)
           currentLinks++
           result.inserted++
         }

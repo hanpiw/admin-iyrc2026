@@ -5,6 +5,7 @@ import { createUser, updateUser, deleteUser } from './actions'
 import { useLomba } from '@/features/lomba/hooks/useLomba'
 import { Plus, X, Users, Shield, ShieldCheck, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 export default function UserManagementPage() {
   const { lomba } = useLomba()
@@ -15,6 +16,7 @@ export default function UserManagementPage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
 
   // Form
   const [email, setEmail] = useState('')
@@ -81,7 +83,6 @@ export default function UserManagementPage() {
   }
 
   const handleDelete = async (userId: string, userName: string) => {
-    if (!confirm(`Yakin ingin menghapus user "${userName}"? Aksi ini tidak bisa dibatalkan.`)) return
     const res = await deleteUser(userId)
     if (res.error) alert(res.error)
     else fetchUsers()
@@ -142,7 +143,7 @@ export default function UserManagementPage() {
                           className="p-2 text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 rounded-md transition-colors" aria-label="Edit user">
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button onClick={() => handleDelete(u.id, u.nama)}
+                        <button onClick={() => setDeleteConfirm({ id: u.id, name: u.nama })}
                           className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors" aria-label="Hapus user">
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -228,6 +229,22 @@ export default function UserManagementPage() {
           </div>
         </div>
       )}
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => {
+          if (deleteConfirm) {
+            handleDelete(deleteConfirm.id, deleteConfirm.name)
+          }
+        }}
+        title="Hapus Pengguna"
+        message={`Apakah Anda yakin ingin menghapus pengguna "${deleteConfirm?.name}"? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        variant="danger"
+      />
     </div>
   )
 }

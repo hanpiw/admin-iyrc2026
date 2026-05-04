@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { PesertaWithStatus } from '../types'
 import { CheckCircle2, Circle, Trash2, Pencil, ChevronLeft, ChevronRight, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 // Capitalize Each Word helper
 export function capitalizeEachWord(str: string): string {
@@ -31,6 +32,7 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, onEdit, 
   const [pageSize, setPageSize] = useState<number>(10)
   const [sortField, setSortField] = useState<SortField | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null)
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -226,11 +228,7 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, onEdit, 
                         </button>
                       )}
                       <button
-                        onClick={() => {
-                          if (confirm(`Yakin ingin menghapus peserta ${capitalizeEachWord(p.nama)}?`)) {
-                            onDelete(p.peserta_lomba_id, p.nama)
-                          }
-                        }}
+                        onClick={() => setDeleteConfirm({ id: p.peserta_lomba_id, name: p.nama })}
                         className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
                         aria-label="Hapus peserta"
                       >
@@ -281,6 +279,22 @@ export function TablePeserta({ peserta, loading, onToggleAcc, onDelete, onEdit, 
           </div>
         </div>
       )}
+
+      {/* Custom Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => {
+          if (deleteConfirm) {
+            onDelete(deleteConfirm.id, deleteConfirm.name)
+          }
+        }}
+        title="Hapus Peserta"
+        message={`Apakah Anda yakin ingin menghapus peserta "${deleteConfirm ? capitalizeEachWord(deleteConfirm.name) : ''}"? Tindakan ini tidak dapat dibatalkan.`}
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        variant="danger"
+      />
     </div>
   )
 }
