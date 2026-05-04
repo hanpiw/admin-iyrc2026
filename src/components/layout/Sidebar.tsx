@@ -33,7 +33,7 @@ const iconMap: Record<string, any> = {
   "Game Maker Kit": Gamepad2,
   "Drone Soccer": Plane,
   "Item Recycle": Recycle,
-  "Robot Theater": Drama,
+  "Theater Robot": Drama,
 }
 
 export function Sidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (val: boolean) => void }) {

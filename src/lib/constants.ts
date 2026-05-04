@@ -56,8 +56,8 @@ export const LOMBA_HIERARCHY: Record<string, CategoryHierarchy> = {
     name: "Item Recycle",
     levels: ["Junior BC", "Senior"]
   },
-  "Robot Theater": {
-    name: "Robot Theater",
+  "Theater Robot": {
+    name: "Theater Robot",
     levels: ["Junior ABC", "Senior"]
   }
 }
