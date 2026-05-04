@@ -187,4 +187,4 @@ INSERT INTO public.lomba (nama) VALUES
 ('Game Maker Kit'),
 ('Drone Soccer'),
 ('Item Recycle'),
-('Robot Teather');
+('Robot Theater');
