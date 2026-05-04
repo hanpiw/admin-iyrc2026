@@ -86,7 +86,7 @@ export function ImportExcelModal({ isOpen, onClose, onSuccess }: ImportExcelModa
 
               <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
                 <p className="font-medium mb-1">Format kolom yang diharapkan:</p>
-                <p><strong>Nama</strong> | <strong>Kelas</strong> | <strong>Sekolah</strong> | <strong>Kategori Lomba</strong></p>
+                <p><strong>Nama</strong> | <strong>Kelas</strong> | <strong>Sekolah</strong> | <strong>Kategori Lomba</strong> | <strong>Level</strong></p>
               </div>
             </>
           )}
