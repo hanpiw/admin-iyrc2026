@@ -9,7 +9,7 @@ interface ImportExcelModalProps {
   onSuccess: () => void
 }
 
-type ImportRow = { nama: string; kelas: string; sekolah: string; kategori_lomba: string }
+type ImportRow = { nama: string; kelas: string; sekolah: string; kategori_lomba: string; level: string }
 
 export function ImportExcelModal({ isOpen, onClose, onSuccess }: ImportExcelModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -36,7 +36,8 @@ export function ImportExcelModal({ isOpen, onClose, onSuccess }: ImportExcelModa
         nama: row['Nama'] || row['nama'] || row['NAMA'] || '',
         kelas: row['Kelas'] || row['kelas'] || row['KELAS'] || '',
         sekolah: row['Sekolah'] || row['sekolah'] || row['SEKOLAH'] || row['Asal Sekolah'] || '',
-        kategori_lomba: row['Kategori Lomba'] || row['kategori_lomba'] || row['KATEGORI LOMBA'] || row['Lomba'] || row['lomba'] || ''
+        kategori_lomba: row['Kategori Lomba'] || row['kategori_lomba'] || row['KATEGORI LOMBA'] || row['Lomba'] || row['lomba'] || '',
+        level: row['Level'] || row['level'] || row['LEVEL'] || ''
       })).filter((r: ImportRow) => r.nama)
 
       setRows(mapped)
@@ -103,6 +104,7 @@ export function ImportExcelModal({ isOpen, onClose, onSuccess }: ImportExcelModa
                       <th className="px-3 py-2">Kelas</th>
                       <th className="px-3 py-2">Sekolah</th>
                       <th className="px-3 py-2">Kategori Lomba</th>
+                      <th className="px-3 py-2">Level</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -113,6 +115,7 @@ export function ImportExcelModal({ isOpen, onClose, onSuccess }: ImportExcelModa
                         <td className="px-3 py-1.5">{r.kelas}</td>
                         <td className="px-3 py-1.5">{r.sekolah}</td>
                         <td className="px-3 py-1.5">{r.kategori_lomba}</td>
+                        <td className="px-3 py-1.5">{r.level || '-'}</td>
                       </tr>
                     ))}
                   </tbody>

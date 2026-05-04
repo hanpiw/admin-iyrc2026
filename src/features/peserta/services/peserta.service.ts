@@ -105,72 +105,102 @@ export const pesertaService = {
     return true
   },
 
-  async importFromExcel(rows: { nama: string; kelas: string; sekolah: string; kategori_lomba: string }[]): Promise<{ inserted: number; updated: number; skipped: number; errors: string[] }> {
+  async importFromExcel(rows: { nama: string; kelas: string; sekolah: string; kategori_lomba: string; level?: string }[]): Promise<{ inserted: number; updated: number; skipped: number; errors: string[] }> {
     const supabase = createClient()
     const result = { inserted: 0, updated: 0, skipped: 0, errors: [] as string[] }
 
-    // Get all lomba
+    // 1. Get all lomba to map names to IDs
     const { data: allLomba } = await supabase.from('lomba').select('id, nama')
     if (!allLomba) { result.errors.push('Gagal memuat data lomba'); return result }
     const lombaMap = new Map(allLomba.map(l => [l.nama.toLowerCase(), l.id]))
 
-    for (const row of rows) {
-      const nama = capitalizeEachWord(row.nama.trim())
-      const kelas = row.kelas.trim()
-      const sekolah = row.sekolah.trim()
-      const kategori = row.kategori_lomba.trim()
+    // 2. Pre-process rows: Capitalize and filter
+    const processedRows = rows.map(row => ({
+      nama: capitalizeEachWord(row.nama.trim()),
+      kelas: row.kelas.toString().trim(),
+      sekolah: row.sekolah.toString().trim(),
+      kategori: row.kategori_lomba.trim(),
+      level: row.level?.toString().trim() || null
+    })).filter(row => row.nama && row.kategori)
 
-      if (!nama || !kelas || !sekolah || !kategori) {
-        result.errors.push(`Data tidak lengkap: ${nama || '(kosong)'}`)
-        result.skipped++
-        continue
-      }
+    if (processedRows.length === 0) return result
 
-      // Find lomba_id
-      const lombaId = lombaMap.get(kategori.toLowerCase())
+    // 3. Batch fetch existing peserta by name
+    const uniqueNames = [...new Set(processedRows.map(r => r.nama))]
+    const { data: existingPesertaList } = await supabase
+      .from('peserta')
+      .select('id, nama, kelas, sekolah')
+      .in('nama', uniqueNames)
+    
+    const existingPesertaMap = new Map(existingPesertaList?.map(p => [p.nama.toLowerCase(), p]) || [])
+
+    // 4. Batch fetch existing links for these peserta
+    const existingIds = existingPesertaList?.map(p => p.id) || []
+    let existingLinks: any[] = []
+    if (existingIds.length > 0) {
+      const { data: links } = await supabase
+        .from('peserta_lomba')
+        .select('peserta_id, lomba_id')
+        .in('peserta_id', existingIds)
+      existingLinks = links || []
+    }
+    const linkSet = new Set(existingLinks.map(l => `${l.peserta_id}_${l.lomba_id}`))
+
+    // 5. Prepare batch operations
+    const pesertaToUpsert: any[] = []
+    const linksToInsert: any[] = []
+
+    for (const row of processedRows) {
+      const lombaId = lombaMap.get(row.kategori.toLowerCase())
       if (!lombaId) {
-        result.errors.push(`Kategori "${kategori}" tidak ditemukan untuk: ${nama}`)
+        result.errors.push(`Kategori "${row.kategori}" tidak ditemukan untuk: ${row.nama}`)
         result.skipped++
         continue
       }
 
-      // Check if peserta already exists (by name)
-      const { data: existingPeserta } = await supabase.from('peserta').select('id').ilike('nama', nama).limit(1)
-      
-      if (existingPeserta && existingPeserta.length > 0) {
-        const pesertaId = existingPeserta[0].id
+      const existing = existingPesertaMap.get(row.nama.toLowerCase())
+      let pesertaId = existing?.id
 
-        // Update peserta data
-        await supabase.from('peserta').update({ kelas, sekolah }).eq('id', pesertaId)
-
-        // Check if already linked to this lomba
-        const { data: existingLink } = await supabase.from('peserta_lomba').select('id').eq('peserta_id', pesertaId).eq('lomba_id', lombaId).limit(1)
-
-        if (existingLink && existingLink.length > 0) {
-          // Already linked — update
+      if (existing) {
+        // Prepare update for existing peserta
+        pesertaToUpsert.push({ id: pesertaId, nama: row.nama, kelas: row.kelas, sekolah: row.sekolah })
+        
+        // Check if link exists
+        if (linkSet.has(`${pesertaId}_${lombaId}`)) {
           result.updated++
         } else {
-          // Check max 3 lomba
-          const { count } = await supabase.from('peserta_lomba').select('*', { count: 'exact', head: true }).eq('peserta_id', pesertaId)
-          if ((count || 0) >= 3) {
-            result.errors.push(`${nama} sudah terdaftar di 3 lomba (maks). Tidak bisa ditambah ke ${kategori}.`)
+          // Check max 3 lomba (approximate locally for speed, then verify if needed)
+          const currentLinkCount = existingLinks.filter(l => l.peserta_id === pesertaId).length
+          if (currentLinkCount >= 3) {
+            result.errors.push(`${row.nama} sudah terdaftar di 3 lomba. Dilewati untuk ${row.kategori}.`)
             result.skipped++
             continue
           }
-          // Insert new link
-          const { error: linkErr } = await supabase.from('peserta_lomba').insert({ peserta_id: pesertaId, lomba_id: lombaId, status_acc: false })
-          if (linkErr) { result.errors.push(`Gagal menambah ${nama} ke ${kategori}: ${linkErr.message}`); result.skipped++; continue }
+          linksToInsert.push({ peserta_id: pesertaId, lomba_id: lombaId, level: row.level, status_acc: false })
           result.inserted++
         }
       } else {
-        // New peserta
+        // Prepare insert for new peserta
         const newId = crypto.randomUUID()
-        const { error: pErr } = await supabase.from('peserta').insert({ id: newId, nama, kelas, sekolah })
-        if (pErr) { result.errors.push(`Gagal insert ${nama}: ${pErr.message}`); result.skipped++; continue }
-
-        const { error: lErr } = await supabase.from('peserta_lomba').insert({ peserta_id: newId, lomba_id: lombaId, status_acc: false })
-        if (lErr) { result.errors.push(`Gagal link ${nama} ke ${kategori}: ${lErr.message}`); result.skipped++; continue }
+        pesertaToUpsert.push({ id: newId, nama: row.nama, kelas: row.kelas, sekolah: row.sekolah })
+        linksToInsert.push({ peserta_id: newId, lomba_id: lombaId, level: row.level, status_acc: false })
         result.inserted++
+      }
+    }
+
+    // 6. Execute batch operations
+    if (pesertaToUpsert.length > 0) {
+      const { error: pErr } = await supabase.from('peserta').upsert(pesertaToUpsert, { onConflict: 'id' })
+      if (pErr) result.errors.push(`Error batch upsert peserta: ${pErr.message}`)
+    }
+
+    if (linksToInsert.length > 0) {
+      // Chunk links insertion to avoid large payload errors
+      const chunkSize = 50
+      for (let i = 0; i < linksToInsert.length; i += chunkSize) {
+        const chunk = linksToInsert.slice(i, i + chunkSize)
+        const { error: lErr } = await supabase.from('peserta_lomba').insert(chunk)
+        if (lErr) result.errors.push(`Error batch insert links: ${lErr.message}`)
       }
     }
 
