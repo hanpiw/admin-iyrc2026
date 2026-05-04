@@ -114,77 +114,110 @@ export const pesertaService = {
     if (!allLomba) { result.errors.push('Gagal memuat data lomba'); return result }
     const lombaMap = new Map(allLomba.map(l => [l.nama.toLowerCase(), l.id]))
 
-    // 2. Pre-process rows: Capitalize and filter
-    const processedRows = rows.map(row => ({
-      nama: capitalizeEachWord(row.nama.trim()),
-      kelas: row.kelas.toString().trim(),
-      sekolah: row.sekolah.toString().trim(),
-      kategori: row.kategori_lomba.trim(),
-      level: row.level?.toString().trim() || null
-    })).filter(row => row.nama && row.kategori)
+    // 2. Group rows by participant name to handle multi-category cells and duplicate rows
+    const participantsData = new Map<string, { 
+      nama: string; 
+      kelas: string; 
+      sekolah: string; 
+      lombaIds: Set<string>; 
+      level: string | null 
+    }>()
 
-    if (processedRows.length === 0) return result
+    for (const row of rows) {
+      const rawNama = row.nama?.toString().trim()
+      const rawKategori = row.kategori_lomba?.toString().trim()
+      if (!rawNama || !rawKategori) continue
+
+      const nama = capitalizeEachWord(rawNama)
+      const nameKey = nama.toLowerCase()
+      const categories = rawKategori.split(',').map(c => c.trim()).filter(c => c)
+      
+      if (!participantsData.has(nameKey)) {
+        participantsData.set(nameKey, {
+          nama,
+          kelas: row.kelas?.toString().trim() || '',
+          sekolah: row.sekolah?.toString().trim() || '',
+          lombaIds: new Set(),
+          level: row.level?.toString().trim() || null
+        })
+      }
+
+      const pData = participantsData.get(nameKey)!
+      for (const catName of categories) {
+        const lid = lombaMap.get(catName.toLowerCase())
+        if (lid) pData.lombaIds.add(lid)
+        else result.errors.push(`Kategori "${catName}" tidak ditemukan untuk: ${nama}`)
+      }
+    }
+
+    if (participantsData.size === 0) return result
 
     // 3. Batch fetch existing peserta by name
-    const uniqueNames = [...new Set(processedRows.map(r => r.nama))]
+    const uniqueNames = Array.from(participantsData.values()).map(p => p.nama)
     const { data: existingPesertaList } = await supabase
       .from('peserta')
-      .select('id, nama, kelas, sekolah')
+      .select('id, nama')
       .in('nama', uniqueNames)
     
-    const existingPesertaMap = new Map(existingPesertaList?.map(p => [p.nama.toLowerCase(), p]) || [])
+    const existingPesertaMap = new Map(existingPesertaList?.map(p => [p.nama.toLowerCase(), p.id]) || [])
 
     // 4. Batch fetch existing links for these peserta
     const existingIds = existingPesertaList?.map(p => p.id) || []
-    let existingLinks: any[] = []
+    const linkSet = new Set<string>() // Stores "pesertaId_lombaId"
+    const participantLinkCount = new Map<string, number>() // Stores "pesertaId" -> count
+
     if (existingIds.length > 0) {
       const { data: links } = await supabase
         .from('peserta_lomba')
         .select('peserta_id, lomba_id')
         .in('peserta_id', existingIds)
-      existingLinks = links || []
+      
+      links?.forEach(l => {
+        linkSet.add(`${l.peserta_id}_${l.lomba_id}`)
+        participantLinkCount.set(l.peserta_id, (participantLinkCount.get(l.peserta_id) || 0) + 1)
+      })
     }
-    const linkSet = new Set(existingLinks.map(l => `${l.peserta_id}_${l.lomba_id}`))
 
     // 5. Prepare batch operations
     const pesertaToUpsert: any[] = []
     const linksToInsert: any[] = []
 
-    for (const row of processedRows) {
-      const lombaId = lombaMap.get(row.kategori.toLowerCase())
-      if (!lombaId) {
-        result.errors.push(`Kategori "${row.kategori}" tidak ditemukan untuk: ${row.nama}`)
-        result.skipped++
-        continue
+    for (const [nameKey, data] of participantsData) {
+      let pesertaId = existingPesertaMap.get(nameKey)
+      const isNewPeserta = !pesertaId
+
+      if (isNewPeserta) {
+        pesertaId = crypto.randomUUID()
+        pesertaToUpsert.push({ id: pesertaId, nama: data.nama, kelas: data.kelas, sekolah: data.sekolah })
+      } else {
+        // Update existing peserta basic info
+        pesertaToUpsert.push({ id: pesertaId, nama: data.nama, kelas: data.kelas, sekolah: data.sekolah })
       }
 
-      const existing = existingPesertaMap.get(row.nama.toLowerCase())
-      let pesertaId = existing?.id
-
-      if (existing) {
-        // Prepare update for existing peserta
-        pesertaToUpsert.push({ id: pesertaId, nama: row.nama, kelas: row.kelas, sekolah: row.sekolah })
-        
-        // Check if link exists
-        if (linkSet.has(`${pesertaId}_${lombaId}`)) {
+      // Process categories
+      let currentLinks = participantLinkCount.get(pesertaId!) || 0
+      
+      for (const lid of data.lombaIds) {
+        if (linkSet.has(`${pesertaId}_${lid}`)) {
           result.updated++
         } else {
-          // Check max 3 lomba (approximate locally for speed, then verify if needed)
-          const currentLinkCount = existingLinks.filter(l => l.peserta_id === pesertaId).length
-          if (currentLinkCount >= 3) {
-            result.errors.push(`${row.nama} sudah terdaftar di 3 lomba. Dilewati untuk ${row.kategori}.`)
+          if (currentLinks >= 3) {
+            const lName = Array.from(lombaMap.entries()).find(([_, id]) => id === lid)?.[0] || 'Unknown'
+            result.errors.push(`${data.nama} sudah mencapai limit 3 lomba. Dilewati untuk: ${lName}`)
             result.skipped++
             continue
           }
-          linksToInsert.push({ peserta_id: pesertaId, lomba_id: lombaId, level: row.level, status_acc: false })
+          
+          linksToInsert.push({ 
+            peserta_id: pesertaId, 
+            lomba_id: lid, 
+            level: data.level, 
+            status_acc: false 
+          })
+          linkSet.add(`${pesertaId}_${lid}`) // Avoid duplicates in same import
+          currentLinks++
           result.inserted++
         }
-      } else {
-        // Prepare insert for new peserta
-        const newId = crypto.randomUUID()
-        pesertaToUpsert.push({ id: newId, nama: row.nama, kelas: row.kelas, sekolah: row.sekolah })
-        linksToInsert.push({ peserta_id: newId, lomba_id: lombaId, level: row.level, status_acc: false })
-        result.inserted++
       }
     }
 
@@ -195,7 +228,6 @@ export const pesertaService = {
     }
 
     if (linksToInsert.length > 0) {
-      // Chunk links insertion to avoid large payload errors
       const chunkSize = 50
       for (let i = 0; i < linksToInsert.length; i += chunkSize) {
         const chunk = linksToInsert.slice(i, i + chunkSize)
