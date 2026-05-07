@@ -15,26 +15,33 @@ export default function LombaPage({ params }: { params: Promise<{ slug: string }
   const resolvedParams = use(params)
   const slug = resolvedParams.slug
   
-  const title = useMemo(() => {
-    return slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+  const [title, setTitle] = useState<string>('')
+  const [lombaId, setLombaId] = useState<string>('')
+  
+  useEffect(() => {
+    async function fetchLomba() {
+      const supabase = createClient()
+      const { data } = await supabase.from('lomba').select('id, nama')
+      if (data) {
+        const matched = data.find(l => l.nama.toLowerCase().replace(/\s+/g, '-') === slug)
+        if (matched) {
+          setTitle(matched.nama)
+          setLombaId(matched.id)
+        } else {
+          // Fallback if not found
+          setTitle(slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '))
+        }
+      }
+    }
+    fetchLomba()
   }, [slug])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPeserta, setEditingPeserta] = useState<PesertaWithStatus | null>(null)
-  const [lombaId, setLombaId] = useState<string>('')
   const [canAddPeserta, setCanAddPeserta] = useState(false)
   
   const { peserta, loading, toggleAcc, deletePeserta, updatePeserta, refresh } = usePeserta(slug)
-
-  useEffect(() => {
-    async function fetchLombaId() {
-      const supabase = createClient()
-      const { data } = await supabase.from('lomba').select('id').eq('nama', title).single()
-      if (data) setLombaId(data.id)
-    }
-    fetchLombaId()
-  }, [title])
 
   useEffect(() => {
     async function checkPermission() {
