@@ -19,14 +19,15 @@ import {
   Drama,
   Folder,
   Settings2,
-  Users
+  Users,
+  PersonStanding
 } from "lucide-react"
 
 // Icon mapping for each lomba category
 const iconMap: Record<string, any> = {
   "Kinder Mission": Baby,
   "BrickMRT": Zap,
-  "BrickModel": block,
+  "BrickModel": PersonStanding,
   "2 On 2 Soccer": Trophy,
   "Coding Mission": Code2,
   "AI Animation": Sparkles,
