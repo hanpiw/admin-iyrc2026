@@ -179,7 +179,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.lomba, public.peserta, publ
 -- Seed some initial Lomba data
 INSERT INTO public.lomba (nama) VALUES
 ('Kinder Mission'),
-('Brickspeed'),
+('BrickMRT'),
+('BrickModel')
 ('2 On 2 Soccer'),
 ('Coding Mission'),
 ('AI Animation'),

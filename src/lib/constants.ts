@@ -14,12 +14,13 @@ export const LOMBA_HIERARCHY: Record<string, CategoryHierarchy> = {
     name: "Kinder Mission",
     levels: ["Junior A", "Junior B", "Junior C"]
   },
-  "Brickspeed": {
-    name: "Brickspeed",
-    subCategories: [
-      { name: "MRT", levels: ["Junior A", "Junior B", "Junior C", "Senior"] },
-      { name: "Model", levels: ["Junior A", "Junior B", "Junior C", "Senior"] }
-    ]
+  "BrickMRT": {
+    name: "BrickMRT",
+    levels: ["Junior A", "Junior B", "Junior C", "Senior"]
+  },
+  "BrickModel": {
+    name: "BrickModel",
+    levels: ["Junior A", "Junior B", "Junior C", "Senior"]
   },
   "2 On 2 Soccer": {
     name: "2 On 2 Soccer",

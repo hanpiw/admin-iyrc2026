@@ -25,7 +25,8 @@ import {
 // Icon mapping for each lomba category
 const iconMap: Record<string, any> = {
   "Kinder Mission": Baby,
-  "Brickspeed": Zap,
+  "BrickMRT": Zap,
+  "BrickModel": block,
   "2 On 2 Soccer": Trophy,
   "Coding Mission": Code2,
   "AI Animation": Sparkles,
